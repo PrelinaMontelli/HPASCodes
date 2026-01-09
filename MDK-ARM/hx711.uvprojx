@@ -489,6 +489,11 @@
               <FileType>1</FileType>
               <FilePath>..\Core\Src\Filteringalgorithm.C</FilePath>
             </File>
+            <File>
+              <FileName>Linearization.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\Linearization.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

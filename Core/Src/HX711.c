@@ -4,6 +4,8 @@
 #include "Filteringalgorithm.h"
 
 static int32_t val = 0;
+static int32_t last_valid = 0;
+static uint8_t has_valid_sample = 0U;
 int pulse_mun=0;
 static int32_t HX711_Buffer = 0,First_Weight=0,Weight=0;
 static uint8_t filter_initialized;
@@ -44,7 +46,6 @@ long Get_Weight(void)
 
 int32_t Get_number()
 {
-	val=0;
 		  CLK_0;
 		  uint32_t start_tick = HAL_GetTick();
 		  uint32_t guard = HX711_READY_TIMEOUT_LOOPS;
@@ -52,7 +53,13 @@ int32_t Get_number()
 		  {
 		  	if (((HAL_GetTick() - start_tick) > HX711_READY_TIMEOUT_MS) || (guard-- == 0U))
 		  	{
-		  		return val; /* Timeout: return last latched value (zero on first call) */
+		  		if (has_valid_sample)
+		  		{
+		  			return last_valid; /* After first good sample, reuse last on timeout */
+		  		}
+		  		/* Before first valid sample, restart wait to avoid seeding baseline with zero */
+		  		start_tick = HAL_GetTick();
+		  		guard = HX711_READY_TIMEOUT_LOOPS;
 		  	}
 		  	__NOP();
 		  }
@@ -75,6 +82,8 @@ int32_t Get_number()
 		  {
 		  	val |= 0xFF000000;
 		  }
+		  has_valid_sample = 1U;
+		  last_valid = val;
 		  HAL_Delay_us(1);
 		  CLK_0;
 		  return val;

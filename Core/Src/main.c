@@ -28,6 +28,7 @@
 #include "hx711.h"
 #include "OLED.h"
 #include "Filteringalgorithm.h"
+#include "Linearization.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,6 +36,10 @@
 
 long First_weight=0,weight=0;
 float weight_value=0.0f;
+static float display_value=0.0f;
+static int32_t locked_int = 0;
+static uint8_t display_locked = 0U;
+static uint32_t lock_start_tick = 0U;
 
 /* USER CODE END PTD */
 
@@ -105,17 +110,30 @@ int main(void)
   /* USER CODE BEGIN 2 */
   OLED_Init();
   OLED_ShowString(1, 1, "Weight(g):");
-  OLED_ShowFloat(2, 1, 0.0f, 4);
+  OLED_ShowFloat(2, 1, 0.0f, 2);
 #if FILTER_ALGO_TYPE == FILTER_ALGO_KALMAN
   OLED_ShowString(3, 1, "Filter:Kalman   ");
 #elif FILTER_ALGO_TYPE == FILTER_ALGO_MOVING_AVG
   OLED_ShowString(3, 1, "Filter:MovAvg  ");
 #endif
+#if LIN_METHOD_TYPE == LIN_METHOD_POLY
+  OLED_ShowString(4, 1, "Lin:Poly       ");
+#elif LIN_METHOD_TYPE == LIN_METHOD_PWL
+  OLED_ShowString(4, 1, "Lin:PWL        ");
+#else
+  OLED_ShowString(4, 1, "Lin:Unknown    ");
+#endif
+  OLED_ShowString(4, 1, "Wait HX711...  ");
+  /* Hard-wait until HX711 delivers first valid sample to avoid seeding baseline with zero */
+  (void)Get_number();
+
   OLED_ShowString(4, 1, "Stabilizing    ");
   HAL_Delay(5000);
   OLED_ShowString(4, 1, "                ");
   HAL_Delay(1000);
-	First_weight=Get_Weight();
+  /* Use the first available filtered reading as baseline, even if large */
+  Filteringalgorithm_Init();
+  First_weight = Get_Weight();
     
 
   /* USER CODE END 2 */
@@ -124,12 +142,50 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    weight = -Get_Weight() + First_weight;
-    /* Two-point calibration: 20g->1170, 50g->2962 => k≈0.01674, b≈0.434 */
-    weight_value = 0.01674f * weight + 0.434f;
+    weight = Get_Weight() - First_weight; /* baseline-subtracted raw counts */
+    weight_value = Linearization_Apply((float)weight);
+    if ((weight_value < 0.5f) && (weight_value > -0.5f))
+    {
+      weight_value = 0.0f;
+    }
 
-    OLED_ShowFloat(2, 1, weight_value, 4);
-    printf("%.4f\r\n", (double)weight_value);
+    int32_t current_int = (int32_t)(weight_value >= 0.0f ? (weight_value + 0.5f) : (weight_value - 0.5f));
+
+    if (display_locked)
+    {
+      /* If integer part changes, unlock */
+      if (current_int != locked_int)
+      {
+        display_locked = 0U;
+      }
+    }
+
+    if (!display_locked)
+    {
+      /* Track stability window for locking */
+      static int32_t last_int = 0;
+      static uint32_t last_change_tick = 0U;
+
+      if (current_int != last_int)
+      {
+        last_int = current_int;
+        last_change_tick = HAL_GetTick();
+      }
+      else
+      {
+        if ((current_int != 0) && ((HAL_GetTick() - last_change_tick) >= 3000U))
+        {
+          display_locked = 1U;
+          locked_int = current_int;
+          lock_start_tick = HAL_GetTick();
+        }
+      }
+
+      display_value = weight_value;
+    }
+
+    OLED_ShowFloat(2, 1, display_value, 2);
+    printf("%.2f\r\n", (double)display_value);
     HAL_Delay(120);
 	
     /* USER CODE END WHILE */

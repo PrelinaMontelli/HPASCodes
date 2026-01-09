@@ -1,1 +1,14 @@
 .DS_Store
+
+# Keil/ARM build outputs
+*.axf
+*.crf
+*.d
+*.dep
+*.hex
+*.htm
+*.lnp
+*.map
+*.o
+*.Bak
+*.lst
