@@ -69,11 +69,30 @@ return (ch);
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void OLED_ShowFloat(uint8_t Line, uint8_t Column, float Number, uint8_t DecimalLength);
+static void OLED_ShowHeader(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+static void OLED_ShowHeader(void)
+{
+  OLED_ShowString(1, 1, "Weight(g):");
+  OLED_ShowFloat(2, 1, 0.0f, 2);
+#if FILTER_ALGO_TYPE == FILTER_ALGO_KALMAN
+  OLED_ShowString(3, 1, "Filter:Kalman   ");
+#elif FILTER_ALGO_TYPE == FILTER_ALGO_MOVING_AVG
+  OLED_ShowString(3, 1, "Filter:MovAvg  ");
+#endif
+#if LIN_METHOD_TYPE == LIN_METHOD_POLY
+  OLED_ShowString(4, 1, "Lin:Poly       ");
+#elif LIN_METHOD_TYPE == LIN_METHOD_PWL
+  OLED_ShowString(4, 1, "Lin:PWL        ");
+#else
+  OLED_ShowString(4, 1, "Lin:Unknown    ");
+#endif
+}
 
 /* USER CODE END 0 */
 
@@ -109,20 +128,7 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   OLED_Init();
-  OLED_ShowString(1, 1, "Weight(g):");
-  OLED_ShowFloat(2, 1, 0.0f, 2);
-#if FILTER_ALGO_TYPE == FILTER_ALGO_KALMAN
-  OLED_ShowString(3, 1, "Filter:Kalman   ");
-#elif FILTER_ALGO_TYPE == FILTER_ALGO_MOVING_AVG
-  OLED_ShowString(3, 1, "Filter:MovAvg  ");
-#endif
-#if LIN_METHOD_TYPE == LIN_METHOD_POLY
-  OLED_ShowString(4, 1, "Lin:Poly       ");
-#elif LIN_METHOD_TYPE == LIN_METHOD_PWL
-  OLED_ShowString(4, 1, "Lin:PWL        ");
-#else
-  OLED_ShowString(4, 1, "Lin:Unknown    ");
-#endif
+  OLED_ShowHeader();
   OLED_ShowString(4, 1, "Wait HX711...  ");
   /* Hard-wait until HX711 delivers first valid sample to avoid seeding baseline with zero */
   (void)Get_number();
@@ -183,6 +189,33 @@ int main(void)
 
       display_value = weight_value;
     }
+
+#if HX711_EXPERIMENTAL
+    uint32_t exp_ev = HX711_GetAndClearExpEvents();
+    if (exp_ev != 0U)
+    {
+      OLED_ShowString(1, 1, " EXPERIMENTAL   ");
+      OLED_ShowString(2, 1, " EVENT TRIGGER  ");
+      if (exp_ev & HX711_EXP_EVT_STARTUP_TARE)
+      {
+        OLED_ShowString(3, 1, " Startup Tare   ");
+      }
+      else
+      {
+        OLED_ShowString(3, 1, "                ");
+      }
+      if (exp_ev & HX711_EXP_EVT_AUTOZERO)
+      {
+        OLED_ShowString(4, 1, " Auto Zero Adj  ");
+      }
+      else
+      {
+        OLED_ShowString(4, 1, "                ");
+      }
+      HAL_Delay(1000);
+      OLED_ShowHeader();
+    }
+#endif
 
     OLED_ShowFloat(2, 1, display_value, 2);
     printf("%.2f\r\n", (double)display_value);

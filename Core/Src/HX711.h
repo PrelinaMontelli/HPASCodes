@@ -9,8 +9,14 @@
 #define Gain_128 25
 #define Gain_64 27
 #define Gain_32 26
+
+/* 实验性事件标志位（仅在 HX711_EXPERIMENTAL=1 时有效） */
+#define HX711_EXP_EVT_STARTUP_TARE 0x01U
+#define HX711_EXP_EVT_AUTOZERO     0x02U
+
 void HAL_Delay_us(uint32_t delay);
 int32_t Get_number(void);
 long Get_Weight(void);
+uint32_t HX711_GetAndClearExpEvents(void);
 
 #endif
