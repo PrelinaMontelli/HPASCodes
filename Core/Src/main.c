@@ -26,8 +26,6 @@
 #define HX711_EXPERIMENTAL 1 /* 总开关：1 开启实验性功能，0 关闭 */
 #endif
 
-
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
@@ -40,24 +38,22 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-long weight=0;
-static long raw_display=0;
-float weight_value=0.0f;
-static float display_value=0.0f;
+long weight = 0;
+static long raw_display = 0;
+float weight_value = 0.0f;
+static float display_value = 0.0f;
 static int32_t locked_int = 0;
 static uint8_t display_locked = 0U;
-static uint32_t lock_start_tick = 0U;
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-int fputc(int ch,FILE *f)
+int fputc(int ch, FILE *f)
 {
-HAL_UART_Transmit(&huart1,(uint8_t *)&ch,1,0xff);
-return (ch);
+  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xff);
+  return (ch);
 }
-
 
 /* USER CODE END PD */
 
@@ -125,7 +121,6 @@ int main(void)
   OLED_Init();
   OLED_ShowHeader();
   OLED_ShowString(4, 1, "Wait HX711...  ");
-  /* Hard-wait until HX711 delivers first valid sample to avoid seeding baseline with zero */
   (void)Get_number();
 
   OLED_ShowString(4, 1, "Stabilizing    ");
@@ -133,7 +128,6 @@ int main(void)
   OLED_ShowString(4, 1, "                ");
   HAL_Delay(1000);
   /* 过滤初始化在 Get_Weight 内延迟进行，此处无需去皮基线 */
-    
 
   /* USER CODE END 2 */
 
@@ -153,7 +147,6 @@ int main(void)
 
     if (display_locked)
     {
-      /* If integer part changes, unlock */
       if (current_int != locked_int)
       {
         display_locked = 0U;
@@ -162,7 +155,6 @@ int main(void)
 
     if (!display_locked)
     {
-      /* Track stability window for locking */
       static int32_t last_int = 0;
       static uint32_t last_change_tick = 0U;
 
@@ -171,13 +163,17 @@ int main(void)
         last_int = current_int;
         last_change_tick = HAL_GetTick();
       }
-      else
+      else if ((current_int != 0) && ((HAL_GetTick() - last_change_tick) >= 3000U))
       {
-        if ((current_int != 0) && ((HAL_GetTick() - last_change_tick) >= 3000U))
-        {
-          display_locked = 1U;
-          locked_int = current_int;
-      display_value = weight_value;
+        display_locked = 1U;
+        locked_int = current_int;
+        display_value = weight_value;
+      }
+
+      if (!display_locked)
+      {
+        display_value = weight_value;
+      }
     }
 
 #if HX711_EXPERIMENTAL
@@ -211,7 +207,7 @@ int main(void)
     OLED_ShowFloat(4, 1, display_value, 2);
     printf("%.2f\r\n", (double)display_value);
     HAL_Delay(120);
-	
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -228,9 +224,6 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
@@ -243,8 +236,6 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -261,15 +252,6 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-//	if (htim == (&htim2))//100us//�ó���ռ3.125us
-//	{
-
-//		
-//			
-
-
-//	}
-
 }
 /* USER CODE END 4 */
 
@@ -279,28 +261,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   */
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

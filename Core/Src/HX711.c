@@ -12,6 +12,7 @@
 #ifndef HX711_EXP_ENABLE_ZERO_TRACK
 #define HX711_EXP_ENABLE_ZERO_TRACK 1 /* 零点跟踪：稳定且近零时允许零点微调 */
 #endif
+
 #ifndef HX711_EXP_ENABLE_STARTUP_TARE
 #define HX711_EXP_ENABLE_STARTUP_TARE 1 /* 开机稳定去皮：上电稳定后记录零点 */
 #endif
