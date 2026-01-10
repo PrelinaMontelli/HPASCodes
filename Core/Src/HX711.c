@@ -4,9 +4,7 @@
 #include "Filteringalgorithm.h"
 
 /* ===================== 实验性功能区域（通过宏开关） ===================== */
-#ifndef HX711_EXPERIMENTAL
-#define HX711_EXPERIMENTAL 0 /* 总开关：1 开启实验性功能，0 关闭 */
-#endif
+
 
 #if HX711_EXPERIMENTAL
 /* 各实验功能的开关 */
