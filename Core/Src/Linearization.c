@@ -8,15 +8,18 @@
 
 /* Piecewise linear table: x in raw counts, y in grams (or desired unit). */
 #ifndef LIN_PWL_COUNT
-#define LIN_PWL_COUNT 4U
+#define LIN_PWL_COUNT 5U
 #endif
 
-/* Calibrated points (raw -> g): (-4527,80.0), (-1715,30.0), (-597,10.0), (-3,0) */
+/* Calibrated points (raw -> g), ascending按原始计数由小到大：
+ * (3350337,87), (3933928,37), (4164915,17), (4281562,7), (4342096,2), (4365724,0)
+ */
 static const lin_segment_t lin_table[LIN_PWL_COUNT] = {
-    { -4527.0f, 80.0f,  -1715.0f, 30.0f },
-    { -1715.0f, 30.0f,   -597.0f, 10.0f },
-    {  -597.0f, 10.0f,     -3.0f,  0.0f },
-    {    -3.0f,  0.0f,      0.0f,  0.0f }, /* clamp near zero */
+    { 3350337.0f, 87.0f, 3933928.0f, 37.0f },
+    { 3933928.0f, 37.0f, 4164915.0f, 17.0f },
+    { 4164915.0f, 17.0f, 4281562.0f,  7.0f },
+    { 4281562.0f,  7.0f, 4342096.0f,  2.0f },
+    { 4342096.0f,  2.0f, 4365724.0f,  0.0f },
 };
 
 /* Public API: apply non-linear compensation to raw input. */

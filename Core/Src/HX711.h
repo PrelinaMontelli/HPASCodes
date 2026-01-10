@@ -15,7 +15,7 @@
 #define HX711_EXP_EVT_AUTOZERO     0x02U
 
 #ifndef HX711_EXPERIMENTAL
-#define HX711_EXPERIMENTAL 1 /* 总开关：1 开启实验性功能，0 关闭 */
+#define HX711_EXPERIMENTAL 0 /* 总开关：1 开启实验性功能，0 关闭；标定时建议关闭 */
 #endif
 
 void HAL_Delay_us(uint32_t delay);
