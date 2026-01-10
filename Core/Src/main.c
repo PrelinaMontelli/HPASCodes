@@ -28,8 +28,6 @@
 
 
 
-
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
@@ -42,7 +40,8 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-long First_weight=0,weight=0;
+long weight=0;
+static long raw_display=0;
 float weight_value=0.0f;
 static float display_value=0.0f;
 static int32_t locked_int = 0;
@@ -86,20 +85,8 @@ static void OLED_ShowHeader(void);
 
 static void OLED_ShowHeader(void)
 {
-  OLED_ShowString(1, 1, "Weight(g):");
-  OLED_ShowFloat(2, 1, 0.0f, 2);
-#if FILTER_ALGO_TYPE == FILTER_ALGO_KALMAN
-  OLED_ShowString(3, 1, "Filter:Kalman   ");
-#elif FILTER_ALGO_TYPE == FILTER_ALGO_MOVING_AVG
-  OLED_ShowString(3, 1, "Filter:MovAvg  ");
-#endif
-#if LIN_METHOD_TYPE == LIN_METHOD_POLY
-  OLED_ShowString(4, 1, "Lin:Poly       ");
-#elif LIN_METHOD_TYPE == LIN_METHOD_PWL
-  OLED_ShowString(4, 1, "Lin:PWL        ");
-#else
-  OLED_ShowString(4, 1, "Lin:Unknown    ");
-#endif
+  OLED_ShowString(1, 1, "RawCnt:");
+  OLED_ShowString(3, 1, "Weight(g):");
 }
 
 /* USER CODE END 0 */
@@ -145,9 +132,7 @@ int main(void)
   HAL_Delay(5000);
   OLED_ShowString(4, 1, "                ");
   HAL_Delay(1000);
-  /* Use the first available filtered reading as baseline, even if large */
-  Filteringalgorithm_Init();
-  First_weight = Get_Weight();
+  /* 过滤初始化在 Get_Weight 内延迟进行，此处无需去皮基线 */
     
 
   /* USER CODE END 2 */
@@ -156,7 +141,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    weight = Get_Weight() - First_weight; /* baseline-subtracted raw counts */
+    weight = Get_Weight();
+    raw_display = weight;
     weight_value = Linearization_Apply((float)weight);
     if ((weight_value < 0.5f) && (weight_value > -0.5f))
     {
@@ -191,10 +177,6 @@ int main(void)
         {
           display_locked = 1U;
           locked_int = current_int;
-          lock_start_tick = HAL_GetTick();
-        }
-      }
-
       display_value = weight_value;
     }
 
@@ -225,7 +207,8 @@ int main(void)
     }
 #endif
 
-    OLED_ShowFloat(2, 1, display_value, 2);
+    OLED_ShowFloat(2, 1, (float)raw_display, 0);
+    OLED_ShowFloat(4, 1, display_value, 2);
     printf("%.2f\r\n", (double)display_value);
     HAL_Delay(120);
 	

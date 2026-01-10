@@ -2,6 +2,7 @@
 #include "usart.h"
 #include "gpio.h"
 #include "Filteringalgorithm.h"
+#include "tim.h" /* 用 TIM2 做精确微秒延时 */
 
 /* ===================== 实验性功能区域（通过宏开关） ===================== */
 
@@ -66,7 +67,7 @@ static int32_t val = 0;
 static int32_t last_valid = 0;
 static uint8_t has_valid_sample = 0U;
 int pulse_mun=0;
-static int32_t HX711_Buffer = 0,First_Weight=0,Weight=0;
+static int32_t HX711_Buffer = 0,Weight=0;
 static uint8_t filter_initialized;
 
 #ifndef HX711_READY_TIMEOUT_MS
@@ -78,12 +79,26 @@ static uint8_t filter_initialized;
 #endif
 
 
-void HAL_Delay_us(uint32_t delay)
+/* 使用 TIM2 实现微秒级延时，避免忙等漂移
+ * 依赖 MX_TIM2_Init() 将 TIM2 配置为 1MHz 基准（PSC=71, ARR=99） */
+void HAL_Delay_us(uint32_t us)
 {
-	delay=delay*5;
-	while(delay)
+	static uint8_t tim2_started = 0U;
+	if (!tim2_started)
 	{
-		delay-=1;
+		(void)HAL_TIM_Base_Start(&htim2);
+		tim2_started = 1U;
+	}
+
+	while (us)
+	{
+		uint32_t chunk = (us > 90U) ? 90U : us; /* 小于 100us 避免计数溢出 */
+		__HAL_TIM_SET_COUNTER(&htim2, 0U);
+		while (__HAL_TIM_GET_COUNTER(&htim2) < chunk)
+		{
+			__NOP();
+		}
+		us -= chunk;
 	}
 }
 
@@ -98,7 +113,6 @@ long Get_Weight(void)
 
 	HX711_Buffer=Get_number();
 	Weight = HX711_Buffer;
-	Weight=(long)((float)Weight/103);
 	Weight = Filteringalgorithm_Process(Weight);
 #if HX711_EXPERIMENTAL
 	Weight = HX711_Experimental_Process(Weight);
@@ -109,9 +123,11 @@ long Get_Weight(void)
 int32_t Get_number()
 {
 		  CLK_0;
+		  val = 0;
 		  uint32_t start_tick = HAL_GetTick();
 		  uint32_t guard = HX711_READY_TIMEOUT_LOOPS;
-		  while(!Read_PIN)
+		  /* 等待 DOUT 变低表示数据就绪，带超时保护 */
+		  while(Read_PIN)
 		  {
 		  	if (((HAL_GetTick() - start_tick) > HX711_READY_TIMEOUT_MS) || (guard-- == 0U))
 		  	{
@@ -127,7 +143,7 @@ int32_t Get_number()
 		  }
 		  for(int i=0;i<24;i++)
 		  {
-			  HAL_Delay_us(100);
+		  	  HAL_Delay_us(1);
 			  CLK_1;
 			  val=val<<1;
 			  HAL_Delay_us(1);
