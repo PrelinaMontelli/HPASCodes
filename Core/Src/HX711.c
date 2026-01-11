@@ -71,6 +71,14 @@ int pulse_mun=0;
 static int32_t HX711_Buffer = 0,Weight=0;
 static uint8_t filter_initialized;
 
+#ifndef HX711_COMP_RAW_DELTA_10G
+#define HX711_COMP_RAW_DELTA_10G 162633L /* 原始计数中约等于 +13g 的差值（在原+10g基础上再补+3g） */
+#endif
+
+#ifndef HX711_COMP_APPLY_THRESH
+#define HX711_COMP_APPLY_THRESH 20000L /* 只在非空载时补偿，计数阈值约等于 ~1.5g */
+#endif
+
 #ifndef HX711_READY_TIMEOUT_MS
 #define HX711_READY_TIMEOUT_MS 50U  /* Max wait for DOUT to go low before aborting */
 #endif
@@ -118,6 +126,11 @@ long Get_Weight(void)
 #if HX711_EXPERIMENTAL
 	Weight = HX711_Experimental_Process(Weight);
 #endif
+	/* 去皮/稳定处理之后再做 +10g 等效的原始计数补偿 */
+	if ((Weight >= HX711_COMP_APPLY_THRESH) || (Weight <= -HX711_COMP_APPLY_THRESH))
+	{
+		Weight -= HX711_COMP_RAW_DELTA_10G; /* 减计数等效于增加重量，避免空载误补偿 */
+	}
 	return Weight;
 }
 

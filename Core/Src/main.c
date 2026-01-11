@@ -138,7 +138,8 @@ int main(void)
     weight = Get_Weight();
     raw_display = weight;
     weight_value = Linearization_Apply((float)weight);
-    if ((weight_value < 0.5f) && (weight_value > -0.5f))
+    /* 空载残留约 1g，放宽近零阈值到 ±1.5g 后置零显示 */
+    if ((weight_value < 1.5f) && (weight_value > -1.5f))
     {
       weight_value = 0.0f;
     }
